@@ -24,12 +24,3 @@ https://huggingface.co/datasets/maharshipandya/spotify-tracks-dataset
 * https://www.tandfonline.com/doi/full/10.1080/23270012.2023.2239824#d1e507 - very similar, different methodology, Indonesia only (2023)
 * https://people.stat.sc.edu/Hitchcock/jds1040.pdf - genre popularity, TS (2022)
 
-
-
-### Plan for now
-
-* Take a sample of the huge dataset
-* Scrape release dates using an API (link song release year to song ID)
-* Clean the data
-* EDA
-
