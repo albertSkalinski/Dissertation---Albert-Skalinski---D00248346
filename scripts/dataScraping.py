@@ -1,11 +1,21 @@
+# The script below has been generated with ChatGPT
+# Source: https://chatgpt.com/share/69c4fb95-09cc-8390-b715-5c30969797d0
+
+# Importing necessary libraries
 import os
+from dotenv import load_dotenv
 import time
 import base64
 import requests
 import pandas as pd
 
-CLIENT_ID = "d1fa3ead0baf487790ebc846061c18fb"
-CLIENT_SECRET = "d9c194a04a2b48688f705e358111fdf8"
+# Declaring the ID and the secret sequence from the app I created 
+load_dotenv("Dissertation/Albert Skalinski - Dissertation/misc/variables.env")
+CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+
+if not CLIENT_ID or not CLIENT_SECRET:
+    raise ValueError("Missing Spotify credentials.")
 
 TOKEN_URL = "https://accounts.spotify.com/api/token"
 TRACK_URL = "https://api.spotify.com/v1/tracks/{track_id}"
@@ -119,7 +129,7 @@ def add_release_dates_to_df(df: pd.DataFrame, track_id_col: str = "track_id") ->
 # Example usage
 if __name__ == "__main__":
     # input CSV must have a column called track_id
-    df = pd.read_csv("Dissertation/Albert Skalinski - Dissertation/data/sampledDataBatch2.csv")
+    df = pd.read_csv("Dissertation/Albert Skalinski - Dissertation/data/sampledDataBatch1.csv")
 
     out_df = add_release_dates_to_df(df, track_id_col="track_id")
 
