@@ -1,5 +1,6 @@
 # The script below has been generated with ChatGPT
-# Source: https://chatgpt.com/share/69c4fb95-09cc-8390-b715-5c30969797d0
+# Sources: https://chatgpt.com/share/69c4fb95-09cc-8390-b715-5c30969797d0
+#          https://chatgpt.com/share/69c4fe84-e40c-838d-8fd2-8064be4892bf
 
 # Importing necessary libraries
 import os
@@ -9,131 +10,104 @@ import base64
 import requests
 import pandas as pd
 
-# Declaring the ID and the secret sequence from the app I created 
+# Declaring the ID and the secret key, which are stored as environmental variables
 load_dotenv("Dissertation/Albert Skalinski - Dissertation/misc/variables.env")
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
+# Raising an error in case of missing credentials
 if not CLIENT_ID or not CLIENT_SECRET:
     raise ValueError("Missing Spotify credentials.")
 
+# Necessary URLs
 TOKEN_URL = "https://accounts.spotify.com/api/token"
 TRACK_URL = "https://api.spotify.com/v1/tracks/{track_id}"
 
+# Getting the token to access Spotify's database
+def getAccessToken(clientID : str, clientSecret : str) -> str:
+    authStr = f"{clientID}:{clientSecret}"
+    authb64 = base64.b64encode(authStr.encode()).decode()
 
-def get_access_token(client_id: str, client_secret: str) -> str:
-    auth_str = f"{client_id}:{client_secret}"
-    auth_b64 = base64.b64encode(auth_str.encode()).decode()
-
-    r = requests.post(
-        TOKEN_URL,
-        headers={
-            "Authorization": f"Basic {auth_b64}",
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
-        data={"grant_type": "client_credentials"},
-        timeout=30,
-    )
+    r = requests.post(TOKEN_URL, headers = {"Authorization" : f"Basic {authb64}",
+                     "Content-Type" : "application/x-www-form-urlencoded",}, data = {"grant_type" : "client_credentials"},
+                     timeout = 30,)
     r.raise_for_status()
     return r.json()["access_token"]
 
+# Scraping the release date
+def getTrackReleaseDate(trackID : str, token : str, maxRetries : int = 3) -> dict:
+    if pd.isna(trackID) or str(trackID).strip() == "":
+        return {"track_id" : trackID, "release_date" : None, "release_year" : None, "release_date_precision" : None,
+               "status" : "missing_track_id",}
 
-def get_track_release_date(track_id: str, token: str, max_retries: int = 3) -> dict:
-    if pd.isna(track_id) or str(track_id).strip() == "":
-        return {
-            "track_id": track_id,
-            "release_date": None,
-            "release_year": None,
-            "release_date_precision": None,
-            "status": "missing_track_id",
-        }
+    trackID = str(trackID).strip()
 
-    track_id = str(track_id).strip()
+    # Sending a request
+    for attempt in range(maxRetries):
+        r = requests.get(TRACK_URL.format(track_id = trackID), headers = {"Authorization" : f"Bearer {token}"}, timeout = 30,)
 
-    for attempt in range(max_retries):
-        r = requests.get(
-            TRACK_URL.format(track_id=track_id),
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=30,
-        )
+        # Checking the current track the script is working on (and its status)
+        print(f"track_id = {trackID}, status = {r.status_code}")
 
-        print(f"track_id={track_id} status={r.status_code}")
-
+        # The rate is limited
         if r.status_code == 429:
-            retry_after = int(r.headers.get("Retry-After", 2))
-            print(f"Rate limited on {track_id}. Retry-After: {r.headers.get('Retry-After')} seconds")
-            time.sleep(retry_after)
+            retryAfter = int(r.headers.get("Retry-After", 2))
+            print(f"Rate limited on {trackID}. Retry-After: {r.headers.get("Retry-After")} seconds")
+            time.sleep(retryAfter)
             continue
-
-        if r.status_code == 401 and attempt < max_retries - 1:
-            token = get_access_token(CLIENT_ID, CLIENT_SECRET)
+        
+        # Authorisation issue
+        if r.status_code == 401 and attempt < maxRetries - 1:
+            token = getAccessToken(CLIENT_ID, CLIENT_SECRET)
             continue
-
+        
+        # Invalid/missing track_id
         if r.status_code == 404:
-            return {
-                "track_id": track_id,
-                "release_date": None,
-                "release_year": None,
-                "release_date_precision": None,
-                "status": "not_found",
-            }
+            return {"track_id" : trackID, "release_date" : None, "release_year" : None, "release_date_precision" : None,
+                   "status" : "not_found",}
 
         r.raise_for_status()
         data = r.json()
 
-        release_date = data["album"].get("release_date")
+        releaseDate = data["album"].get("release_date")
         precision = data["album"].get("release_date_precision")
 
         year = None
-        if release_date and len(release_date) >= 4:
+        if releaseDate and len(releaseDate) >= 4:
             try:
-                year = int(release_date[:4])
+                year = int(releaseDate[:4])
             except ValueError:
                 year = None
 
-        return {
-            "track_id": track_id,
-            "release_date": release_date,
-            "release_year": year,
-            "release_date_precision": precision,
-            "status": "ok",
-        }
+        return {"track_id" : trackID, "release_date" : releaseDate, "release_year" : year, "release_date_precision" : precision,
+               "status" : "ok",}
 
-    return {
-        "track_id": track_id,
-        "release_date": None,
-        "release_year": None,
-        "release_date_precision": None,
-        "status": "failed_after_retries",
-    }
+    return {"track_id" : trackID, "release_date" : None, "release_year" : None, "release_date_precision" : None,
+           "status" : "failed_after_retries",}
 
+# Creating a dataframe out of scraped data
+def makeDF(df : pd.DataFrame, trackIDColumn : str = "track_id") -> pd.DataFrame:
+    if trackIDColumn not in df.columns:
+        raise ValueError(f"Column '{trackIDColumn}' not found in the DataFrame")
 
-def add_release_dates_to_df(df: pd.DataFrame, track_id_col: str = "track_id") -> pd.DataFrame:
-    if track_id_col not in df.columns:
-        raise ValueError(f"Column '{track_id_col}' not found in DataFrame")
-
-    token = get_access_token(CLIENT_ID, CLIENT_SECRET)
+    token = getAccessToken(CLIENT_ID, CLIENT_SECRET)
 
     results = []
-    for track_id in df[track_id_col]:
-        row = get_track_release_date(track_id, token)
+    for trackID in df[trackIDColumn]:
+        row = getTrackReleaseDate(trackID, token)
         results.append(row)
 
-    release_df = pd.DataFrame(results)
+    releaseDF = pd.DataFrame(results)
 
-    # merge back onto original df
-    out_df = df.merge(release_df, on="track_id", how="left")
-    return out_df
+    outDF = df.merge(releaseDF, on = "track_id", how = "left")
+    return outDF
 
-
-# Example usage
+# Actually making the files with the logic above
 if __name__ == "__main__":
-    # input CSV must have a column called track_id
     df = pd.read_csv("Dissertation/Albert Skalinski - Dissertation/data/sampledDataBatch1.csv")
+    outDF = makeDF(df, trackIDColumn = "track_id")
 
-    out_df = add_release_dates_to_df(df, track_id_col="track_id")
+    # Saving the results to a .csv file
+    outDF.to_csv("Dissertation/Albert Skalinski - Dissertation/data/sampledDataWithDatesBatch2.csv", index = False)
 
-    # save result
-    out_df.to_csv("Dissertation/Albert Skalinski - Dissertation/data/sampledDataWithDatesBatch2.csv", index=False)
-
-    print(out_df.head())
+    print(outDF.head())
