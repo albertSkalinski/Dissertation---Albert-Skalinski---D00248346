@@ -22,8 +22,6 @@ Predicting Song Popularity from Spotify Audio Features: How Determinants Change 
 
 ### Dataset(s)
 
-https://huggingface.co/datasets/maharshipandya/spotify-tracks-dataset
-
 https://www.kaggle.com/datasets/solomonameh/spotify-music-dataset?resource=download
 
 
