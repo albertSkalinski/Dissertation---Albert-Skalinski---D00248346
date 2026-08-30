@@ -2,19 +2,16 @@
 
 ---
 
-Predicting Song Popularity from Spotify Audio Features: How Determinants Change Over Time
+What Musical Features Drive Song Popularity? A Spotify Audio Feature Analysis Over Time
 
 ---
 
 This project contains the following structure:
 
-* data - raw and cleaned datasets
-* docs - MD documentation
-* misc - other and obsolete files
-* models - saved trained models
-* notebooks - Jupyter notebooks for EDA and modelling
-* outputs - final results
-* scripts - Python scripts for data processing and model training
+* data - raw and clean datasets
+* docs - project documentation
+* misc - other files
+* notebooks - Jupyter notebooks containing project code
 * README.md - project overview; the file you're reading now
 * requirements - dependencies list
 
