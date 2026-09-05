@@ -2,7 +2,7 @@
 
 ---
 
-What Musical Features Drive Song Popularity? A Spotify Audio Feature Analysis Over Time
+Predicting Song Popularity from Spotify Audio Features: A Temporal Analysis of Changing Popularity
 
 ---
 
